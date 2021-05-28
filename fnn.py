@@ -47,8 +47,7 @@ data = pd.read_json('../yelp_dataset/yelp_dataset_labeled.json', lines=True).fil
 
 
 y = data['label']
-X = data.drop('label', axis=1)
-X = data.drop("business_id", axis=1)
+X = data.drop(columns=['label', 'business_id'], axis=1)
 X['city'] = LabelEncoder().fit_transform(X['city'])
 X['state'] = LabelEncoder().fit_transform(X['state'])
 scaler = StandardScaler()
@@ -57,6 +56,13 @@ X = scaler.fit_transform(X)
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.8, random_state=42)
 
+# y = data['label']
+# city = data['city']
+# state = data['state']
+# city_dummies = pd.get_dummies(city, drop_first=True)
+# state_dummies = pd.get_dummies(state, drop_first=True)
+# x = pd.concat(objs=[data.drop(columns=['business_id', 'label', 'city', 'state']), city_dummies, state_dummies], axis='columns')
+# X_train, X_test, y_train, y_test = train_test_split(x, y, test_size = 0.2)
 
 model = keras.Sequential(
     [
@@ -64,13 +70,13 @@ model = keras.Sequential(
         layers.Dropout(0.2),
         layers.Dense(64, activation="relu"),
         layers.Dropout(0.2),
-        layers.Dense(2, activation='softmax')
+        layers.Dense(1, activation='sigmoid')
     ]
 )
 
 model.compile(
-    optimizer='adam',
-    loss='sparse_categorical_crossentropy',
+    optimizer='rmsprop',
+    loss='binary_crossentropy',
     metrics=['accuracy']
 )
 
@@ -108,12 +114,6 @@ y_pred_prob = model.predict(X_test)
 y_pred = np.argmax(model.predict(X_test), axis=-1)
 
 cm = metrics.confusion_matrix(y_test, y_pred)
-conf_matrix = tf.math.confusion_matrix(y_test, y_pred, num_classes=2).numpy()
-classes = [0, 1]
-conf_df = pd.DataFrame(conf_matrix, index=classes ,columns=classes)
-plt.subplots(figsize=(12, 9))
-conf_fig = sn.heatmap(conf_df, annot=True, fmt="d", cmap="BuPu")
-plt.show()
 plot_confusion_matrix(cm, classes=['Fake', 'Real'])
 print(classification_report(y_test, y_pred))
-print('ml train model auc score {:.6f}'.format(roc_auc_score(y_test, y_pred_prob[:,1])))
+print('ml train model auc score {:.6f}'.format(roc_auc_score(y_test, y_pred_prob)))
